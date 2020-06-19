@@ -30,6 +30,11 @@ jobs:
         GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
         GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
 
+    - name: Dump job context
+      env:
+        JOB_CONTEXT: ${{ toJson(github.event) }}
+      run: echo "$JOB_CONTEXT"
+
     # Runs a single command using the runners shell
     - name: Run a one-line script
       run: echo $GITHUB_ACTOR
