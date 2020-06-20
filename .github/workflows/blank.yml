@@ -57,7 +57,7 @@ jobs:
   
     - name: Delete VPS
       env: 
-        MACHINE_STORAGE_PATH: ${{ GITHUB_WORKSPACE}}/crypted/machine
+        MACHINE_STORAGE_PATH: ${{ env.GITHUB_WORKSPACE + '/crypted/machine' }}
 #        YC_TOKEN: ${{ secrets.YC_TOKEN }}
 #        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
 #      run: ./delete-vps.sh
