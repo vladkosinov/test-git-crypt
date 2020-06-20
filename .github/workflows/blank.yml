@@ -21,14 +21,14 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Ls ~
-      run: ls -la ~/work/test-git-crypt;
+      run: ls -la ~/work/test-git-crypt/test-git-crypt;
       
     - uses: actions/checkout@v2
       with:
         repository: 'yandex-cloud/docker-machine-driver-yandex'
 
     - name: Ls ~
-      run: ls -la ~/work/test-git-crypt;
+      run: ls -la ~/work/test-git-crypt/test-git-crypt;
 
   Deploy:
     # The type of runner that the job will run on
