@@ -54,7 +54,7 @@ jobs:
 
     - name: Create machine
       run: |
-        docker-machine create \
+        ~/docker-machine create \
         --driver yandex \
         --yandex-token=FRegxx408323539fsdgHhsakawe0 \
         some-machine
