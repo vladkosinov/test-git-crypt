@@ -27,7 +27,7 @@ jobs:
           const ref = await github.git.getRef({
               owner: 'yandex-cloud',
               repo: 'docker-machine-driver-yandex',
-              ref: 'refs/heads/master'
+              ref: 'heads/master'
           });
           console.log(ref);
 
