@@ -35,8 +35,8 @@ if [ -n "$VPS_ID" ]; then
             break
         fi
 
-        echo "Waiting 2s more..."
-        sleep 2
+        echo "Waiting 3s more..."
+        sleep 3
     done
 EOT
     if [ $? -ne 0 ]; then
