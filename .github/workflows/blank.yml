@@ -20,7 +20,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Get docker-machine-driver-yandex last commit
     - uses: actions/github-script@v2
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
