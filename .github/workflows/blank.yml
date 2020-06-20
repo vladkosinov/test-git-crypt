@@ -56,60 +56,55 @@ jobs:
         sudo chmod +x /usr/local/bin/docker-machine;
   
     - name: Delete VPS
-#     env: 
-#        YC_TOKEN: ${{ secrets.YC_TOKEN }}
-#        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
-#      run: ./delete-vps.sh
       run: |
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
         export PATH=$PATH:$HOME/go/bin;
 
-        echo $MACHINE_STORAGE_PATH;
-        echo 123
-        echo $PATH;
-        echo 123
-
         docker-machine rm vpn-machine --force
 
-#     - name: Create VPS
-#       run: |
-#         export PATH=$PATH:~/go/bin;
-#         export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
+    - name: Create VPS
+      run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
+        export PATH=$PATH:$HOME/go/bin;
 
-#         ~/docker-machine create \
-#           --driver yandex \
-#           --yandex-token=${{ secrets.YC_TOKEN }} \
-#           --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
-#           --yandex-cores=1 \
-#           --yandex-core-faction=20 \
-#           --yandex-nat=true \
-#           vpn-machine;
+        docker-machine create \
+          --driver yandex \
+          --yandex-token=${{ secrets.YC_TOKEN }} \
+          --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
+          --yandex-cores=1 \
+          --yandex-core-faction=20 \
+          --yandex-nat=true \
+          vpn-machine;
 
-#         ~/docker-machine scp ./crypted/authorized_keys vpn-machine:~
-#         ~/docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
+        docker-machine scp ./crypted/authorized_keys vpn-machine:~
+        docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
-#     - name: Build and deploy VPN container
-#       run: |
-#         export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
-#         export PATH=$PATH:~/go/bin;
+    - name: Build and deploy VPN container
+      run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
+        export PATH=$PATH:$HOME/go/bin;
 
-#         ~/docker-machine env vpn-machine
-#         eval $(~/docker-machine env vpn-machine)
-#         docker-compose up -d --build
+        docker-machine env vpn-machine
+        eval $(docker-machine env vpn-machine)
+        docker-compose up -d --build
 
-#     - name: Update DNS
-#       run: |
-#         export PATH=$PATH:~/go/bin;
-#         echo "\"$(~/docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
-#         docker run --rm -it \
-#             -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
-#             -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
-#             -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
-#             stackexchange/dnscontrol dnscontrol preview | grep "Done"
+    - name: Update DNS
+      run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
+        export PATH=$PATH:$HOME/go/bin;
 
-#         git add crypted
-#         git commit -m "Updated credentials"
-#         git push origin HEAD
+        echo "\"$(docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
+        docker run --rm -it \
+            -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
+            -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
+            -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
+            stackexchange/dnscontrol dnscontrol preview | grep "Done"
+
+    - name: Commit credentials
+      run: |
+        git add crypted
+        git commit -m "Updated credentials"
+        git push origin HEAD
 
 #   Deploy:
 #     # The type of runner that the job will run on
