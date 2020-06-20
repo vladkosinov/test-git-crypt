@@ -62,10 +62,12 @@ jobs:
 #        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
 #      run: ./delete-vps.sh
       run: |
-        echo $PATH;
         echo $MACHINE_STORAGE_PATH;
-        export PATH=$PATH:~/go/bin;
-        ~/docker-machine rm vpn-machine --force
+        echo 123
+        echo $GITHUB_WORKSPACE;
+        echo 123
+#       export PATH=$PATH:~/go/bin;
+#       ~/docker-machine rm vpn-machine --force
 
 #     - name: Create VPS
 #       run: |
