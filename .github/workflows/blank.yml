@@ -57,28 +57,30 @@ jobs:
         IAM_TOKEN=$(curl -s -d "{\"yandexPassportOauthToken\":\"${{ secrets.YC_TOKEN }}\"}" "https://iam.api.cloud.yandex.net/iam/v1/tokens" | jq --raw-output .iamToken)
 
         curl -s -H "Authorization: Bearer ${IAM_TOKEN}" \
-          https://compute.api.cloud.yandex.net/compute/v1/instances\?folder_id\=${{ secrets.YC_FOLDER_ID }} -s |\
+          https://compute.api.cloud.yandex.net/compute/v1/instances\?folder_id\=${{ secrets.YC_FOLDER_ID }} |\
           jq '.instances[].id' --raw-output |\
           xargs -I % curl -X DELETE -H "Authorization: Bearer ${IAM_TOKEN}" \
           https://compute.api.cloud.yandex.net/compute/v1/instances/%
 
     - name: Create machine
-      env:
-        YC_TOKEN: ${{ secrets.YC_TOKEN }}
-        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
       run: |
         PATH=$PATH:~/go/bin;
-        rm -rf  ~/.docker/machine/machines;
 
         ~/docker-machine create \
           --driver yandex \
+          --yandex-token=${{ secrets.YC_TOKEN }} \
+          --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
           --yandex-cores=1 \
           --yandex-core-faction=20 \
           --yandex-nat=true \
-          some-machine;
+          vpn-machine;
         
-        ~/docker-machine scp ~/authorized_keys test-machine:~
-        ~/docker-machine ssh test-machine "cat ~/id_rsa.pub >> .ssh/authorized_keys; sudo sh -c 'cat ~/id_rsa.pub >> /root/.ssh/authorized_keys'"
+        ~/docker-machine scp ~/authorized_keys vpn-machine:~
+        ~/docker-machine ssh vpn-machine "cat ~/id_rsa.pub >> .ssh/authorized_keys; sudo sh -c 'cat ~/id_rsa.pub >> /root/.ssh/authorized_keys'"
+
+    - name: Delete machines info
+      if: ${{ always() }}
+      run: rm -rf  ~/.docker/machine/machines;
 
   Deploy:
     # The type of runner that the job will run on
