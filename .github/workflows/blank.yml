@@ -45,8 +45,19 @@ jobs:
         go get -u github.com/yandex-cloud/docker-machine-driver-yandex
       if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
 
-    - name: Ls go
-      run: ls ~/go/bin/;
+    - name: Download docker-machine
+      run: | 
+        base=https://github.com/docker/machine/releases/download/v0.16.0 && \
+        curl -s -L $base/docker-machine-$(uname -s)-$(uname -m) >~/docker-machine && \
+        chmod +x ~/docker-machine;
+        ~/docker-machine ls
+
+    - name: Create machine
+      run: |
+        docker-machine create \
+        --driver yandex \
+        --yandex-token=FRegxx408323539fsdgHhsakawe0 \
+        some-machine
 
   Deploy:
     # The type of runner that the job will run on
