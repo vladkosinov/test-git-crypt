@@ -56,16 +56,18 @@ jobs:
         chmod +x ~/docker-machine;
   
     - name: Delete VPS
-      env: 
-        MACHINE_STORAGE_PATH: '${{ env.GITHUB_WORKSPACE }}/crypted/machine'
+#     env: 
 #        YC_TOKEN: ${{ secrets.YC_TOKEN }}
 #        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
 #      run: ./delete-vps.sh
       run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
+
         echo $MACHINE_STORAGE_PATH;
         echo 123
         echo $GITHUB_WORKSPACE;
         echo 123
+
 #       export PATH=$PATH:~/go/bin;
 #       ~/docker-machine rm vpn-machine --force
 
