@@ -52,12 +52,24 @@ jobs:
         chmod +x ~/docker-machine;
         ~/docker-machine ls
   
+    - name: Delete all machines
+      run: |
+        IAM_TOKEN=$(curl -s -d "{\"yandexPassportOauthToken\":\"${{ secrets.YC_TOKEN }}\"}" "https://iam.api.cloud.yandex.net/iam/v1/tokens" | jq --raw-output .iamToken)
+
+        curl -s -H "Authorization: Bearer ${IAM_TOKEN}" \
+          https://compute.api.cloud.yandex.net/compute/v1/instances\?folder_id\=${{ secrets.YC_FOLDER_ID }} -s |\
+          jq '.instances[].id' --raw-output |\
+          xargs -I % curl -X DELETE -H "Authorization: Bearer ${IAM_TOKEN}" \
+          https://compute.api.cloud.yandex.net/compute/v1/instances/%
+
     - name: Create machine
+      env:
+        YC_TOKEN: ${{ secrets.YC_TOKEN }}
+        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
       run: |
         PATH=$PATH:~/go/bin;
         ~/docker-machine create \
         --driver yandex \
-        --yandex-token=${{ secrets.YANDEX_TOKEN }} \
         --yandex-cores=1 \
         --yandex-core-faction=20 \
         --yandex-nat=true \
