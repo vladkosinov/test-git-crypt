@@ -20,16 +20,24 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Ls ~
-      run: ls -la ~/work/test-git-crypt/test-git-crypt;
-      
     - uses: actions/checkout@v2
       with:
         path: 'docker-machine-driver-yandex'
         repository: 'yandex-cloud/docker-machine-driver-yandex'
 
-    - name: Ls ~
-      run: ls -la ~/work/test-git-crypt;
+    - uses: actions/cache@v2
+      id: restore-docker-machine-driver-yandex
+      with:
+        path: ~/go/bin/docker-machine-driver-yandex
+        key: ${{ runner.os }}-go-${{ hashFiles('docker-machine-driver-yandex/**') }}
+
+    - name: Install docker-machine-driver-yandex
+      run: |
+        go get -u ./docker-machine-driver-yandex
+      if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
+
+    - name: Ls go
+      run: ls ~/go/bin/;
 
   Deploy:
     # The type of runner that the job will run on
