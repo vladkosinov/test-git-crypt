@@ -63,7 +63,7 @@ jobs:
       run: |
         PATH=$PATH:~/go/bin;
         MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
-        ~/docker-machine rm vpn-machine --force
+        MACHINE_STORAGE_PATH=$(pwd)/crypted/machine ~/docker-machine rm vpn-machine --force
 
     - name: Create VPS
       run: |
