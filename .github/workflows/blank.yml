@@ -71,11 +71,14 @@ jobs:
         rm -rf  ~/.docker/machine/machines;
 
         ~/docker-machine create \
-        --driver yandex \
-        --yandex-cores=1 \
-        --yandex-core-faction=20 \
-        --yandex-nat=true \
-        some-machine
+          --driver yandex \
+          --yandex-cores=1 \
+          --yandex-core-faction=20 \
+          --yandex-nat=true \
+          some-machine;
+        
+        ~/docker-machine scp ~/authorized_keys test-machine:~
+        ~/docker-machine ssh test-machine "cat ~/id_rsa.pub >> .ssh/authorized_keys; sudo sh -c 'cat ~/id_rsa.pub >> /root/.ssh/authorized_keys'"
 
   Deploy:
     # The type of runner that the job will run on
