@@ -50,21 +50,25 @@ jobs:
       if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
 
     - name: Download docker-machine
-      run: | 
+      run: |
         base=https://github.com/docker/machine/releases/download/v0.16.0 && \
         curl -s -L $base/docker-machine-$(uname -s)-$(uname -m) >~/docker-machine && \
         chmod +x ~/docker-machine;
-        ~/docker-machine ls
   
     - name: Delete VPS
-      env: 
-        YC_TOKEN: ${{ secrets.YC_TOKEN }}
-        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
-      run: ./delete-vps.sh
+#      env: 
+#        YC_TOKEN: ${{ secrets.YC_TOKEN }}
+#        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+#      run: ./delete-vps.sh
+      run: |
+        PATH=$PATH:~/go/bin;
+        MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
+        ~docker-machine rm vpn-machine --force
 
     - name: Create VPS
       run: |
         PATH=$PATH:~/go/bin;
+        MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
 
         ~/docker-machine create \
           --driver yandex \
@@ -75,13 +79,14 @@ jobs:
           --yandex-nat=true \
           vpn-machine;
 
-        ~/docker-machine scp ./authorized_keys vpn-machine:~
+        ~/docker-machine scp ./crypted/authorized_keys vpn-machine:~
         ~/docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
     - name: Build and deploy VPN container
       run: |
-        cat crypted/server-ip.json
-        PATH=$PATH:~/go/bin;
+        export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
+        export PATH=$PATH:~/go/bin;
+        ~/docker-machine env vpn-machine
         eval $(~/docker-machine env vpn-machine)
         docker-compose up -d --build
 
