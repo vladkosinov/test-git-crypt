@@ -51,9 +51,10 @@ jobs:
         curl -s -L $base/docker-machine-$(uname -s)-$(uname -m) >~/docker-machine && \
         chmod +x ~/docker-machine;
         ~/docker-machine ls
-
+  
     - name: Create machine
       run: |
+        PATH=$PATH:~/go/bin;
         ~/docker-machine create \
         --driver yandex \
         --yandex-token=FRegxx408323539fsdgHhsakawe0 \
