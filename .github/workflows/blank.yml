@@ -16,13 +16,18 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  Deply VPN:
+  Deploy:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'issues' &&
+      github.event.issue.number == 1 &&
+
       contains(github.event.changes.body.from, '- [ ] on/off') &&
-      contains(github.event.issue.body, '- [x] on/off')
+      contains(github.event.issue.body, '- [x] on/off') &&
+
+      !contains(github.event.changes.body.from, '- [x] on/off') &&
+      !contains(github.event.issue.body, '- [ ] on/off')
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
