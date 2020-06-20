@@ -24,10 +24,10 @@ jobs:
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         script: |
-          const ref = octokit.git.getRef({
-              'yandex-cloud',
-              'docker-machine-driver-yandex',
-              'refs/heads/master'
+          const ref = await octokit.git.getRef({
+              owner: 'yandex-cloud',
+              repo: 'docker-machine-driver-yandex',
+              ref: 'refs/heads/master'
           });
           console.log(ref);
 
