@@ -8,8 +8,8 @@ on:
   issue_comment:
   issues:
     types: [edited]
- # push:
- #   branches: [ master ]
+  push:
+    branches: [ master ]
 
 jobs:
   Test:
@@ -28,7 +28,7 @@ jobs:
       id: docker-machine-driver-yandex-latest-sha
       with:
         result-encoding: string
-        github-token: ${{secrets.GITHUB_TOKEN}}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const ref = await github.git.getRef({
               owner: 'yandex-cloud',
@@ -52,95 +52,99 @@ jobs:
     - name: Download docker-machine
       run: |
         base=https://github.com/docker/machine/releases/download/v0.16.0 && \
-        curl -s -L $base/docker-machine-$(uname -s)-$(uname -m) >~/docker-machine && \
-        chmod +x ~/docker-machine;
+        sudo wget --output-document=/usr/local/bin/docker-machine $base/docker-machine-$(uname -s)-$(uname -m) && \
+        sudo chmod +x /usr/local/bin/docker-machine;
   
     - name: Delete VPS
-#      env: 
+#     env: 
 #        YC_TOKEN: ${{ secrets.YC_TOKEN }}
 #        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
 #      run: ./delete-vps.sh
       run: |
-        PATH=$PATH:~/go/bin;
-        MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
-        ~docker-machine rm vpn-machine --force
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
+        export PATH=$PATH:$HOME/go/bin;
 
-    - name: Create VPS
-      run: |
-        PATH=$PATH:~/go/bin;
-        MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
+        echo $MACHINE_STORAGE_PATH;
+        echo 123
+        echo $PATH;
+        echo 123
 
-        ~/docker-machine create \
-          --driver yandex \
-          --yandex-token=${{ secrets.YC_TOKEN }} \
-          --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
-          --yandex-cores=1 \
-          --yandex-core-faction=20 \
-          --yandex-nat=true \
-          vpn-machine;
+        docker-machine rm vpn-machine --force
 
-        ~/docker-machine scp ./crypted/authorized_keys vpn-machine:~
-        ~/docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
+#     - name: Create VPS
+#       run: |
+#         export PATH=$PATH:~/go/bin;
+#         export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
 
-    - name: Build and deploy VPN container
-      run: |
-        export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
-        export PATH=$PATH:~/go/bin;
-        ~/docker-machine env vpn-machine
-        eval $(~/docker-machine env vpn-machine)
-        docker-compose up -d --build
+#         ~/docker-machine create \
+#           --driver yandex \
+#           --yandex-token=${{ secrets.YC_TOKEN }} \
+#           --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
+#           --yandex-cores=1 \
+#           --yandex-core-faction=20 \
+#           --yandex-nat=true \
+#           vpn-machine;
 
-    - name: Update DNS
-      run: |
-        PATH=$PATH:~/go/bin;
-        echo "\"$(~/docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
-        docker run --rm -it \
-            -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
-            -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
-            -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
-            stackexchange/dnscontrol dnscontrol preview | grep "Done"
+#         ~/docker-machine scp ./crypted/authorized_keys vpn-machine:~
+#         ~/docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
-        git commit crypted/vpn-ip.json -m "Updated Server IP"
-        git push origin HEAD
+#     - name: Build and deploy VPN container
+#       run: |
+#         export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
+#         export PATH=$PATH:~/go/bin;
 
-    - name: Delete docker machines info
-      if: ${{ always() }}
-      run: rm -rf  ~/.docker/machine/machines;
+#         ~/docker-machine env vpn-machine
+#         eval $(~/docker-machine env vpn-machine)
+#         docker-compose up -d --build
 
-  Deploy:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'issues' &&
-      github.event.issue.number == 1 &&
+#     - name: Update DNS
+#       run: |
+#         export PATH=$PATH:~/go/bin;
+#         echo "\"$(~/docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
+#         docker run --rm -it \
+#             -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
+#             -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
+#             -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
+#             stackexchange/dnscontrol dnscontrol preview | grep "Done"
 
-      contains(github.event.changes.body.from, '- [ ] on/off') &&
-      contains(github.event.issue.body, '- [x] on/off') &&
+#         git add crypted
+#         git commit -m "Updated credentials"
+#         git push origin HEAD
 
-      !contains(github.event.changes.body.from, '- [x] on/off') &&
-      !contains(github.event.issue.body, '- [ ] on/off')
+#   Deploy:
+#     # The type of runner that the job will run on
+#     runs-on: ubuntu-latest
+#     if: |
+#       github.event_name == 'issues' &&
+#       github.event.issue.number == 1 &&
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - uses: actions/checkout@v2
+#       contains(github.event.changes.body.from, '- [ ] on/off') &&
+#       contains(github.event.issue.body, '- [x] on/off') &&
 
-    - name: Dump github.event_name
-      env:
-        CONTEXT: ${{ toJson(github.event_name) }}
-      run: echo "$CONTEXT"
+#       !contains(github.event.changes.body.from, '- [x] on/off') &&
+#       !contains(github.event.issue.body, '- [ ] on/off')
 
-    - name: Dump github.event
-      env:
-        CONTEXT: ${{ toJson(github.event) }}
-      run: echo "$CONTEXT"
+#     # Steps represent a sequence of tasks that will be executed as part of the job
+#     steps:
+#     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+#     - uses: actions/checkout@v2
+
+#     - name: Dump github.event_name
+#       env:
+#         CONTEXT: ${{ toJson(github.event_name) }}
+#       run: echo "$CONTEXT"
+
+#     - name: Dump github.event
+#       env:
+#         CONTEXT: ${{ toJson(github.event) }}
+#       run: echo "$CONTEXT"
 
 
 
-    # Runs a single command using the runners shell
-    - name: Run a one-line script
-      run: echo $GITHUB_ACTOR
+#     # Runs a single command using the runners shell
+#     - name: Run a one-line script
+#       run: echo $GITHUB_ACTOR
 
-    # Runs a set of commands using the runners shell
-    - name: Run a multi-line script
-      run: cat secretdir/test.txt
+#     # Runs a set of commands using the runners shell
+#     - name: Run a multi-line script
+#       run: cat secretdir/test.txt
