@@ -52,8 +52,8 @@ jobs:
     - name: Download docker-machine
       run: |
         base=https://github.com/docker/machine/releases/download/v0.16.0 && \
-        curl -s -L $base/docker-machine-$(uname -s)-$(uname -m) >~/docker-machine && \
-        chmod +x ~/docker-machine;
+        curl -s -L $base/docker-machine-$(uname -s)-$(uname -m) >/usr/local/bin/docker-machine && \
+        chmod +x /usr/local/bin/docker-machine;
   
     - name: Delete VPS
 #     env: 
@@ -62,14 +62,14 @@ jobs:
 #      run: ./delete-vps.sh
       run: |
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
+        export PATH=$PATH:$HOME/go/bin;
 
         echo $MACHINE_STORAGE_PATH;
         echo 123
-        echo $GITHUB_WORKSPACE;
+        echo $PATH;
         echo 123
 
-#       export PATH=$PATH:~/go/bin;
-#       ~/docker-machine rm vpn-machine --force
+        docker-machine rm vpn-machine --force
 
 #     - name: Create VPS
 #       run: |
