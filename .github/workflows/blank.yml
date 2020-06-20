@@ -19,7 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Run a multi-line script
-      run: docker-machine ls
+      run: | 
+        base=https://github.com/docker/machine/releases/download/v0.16.0 && \
+        curl -L $base/docker-machine-$(uname -s)-$(uname -m) >/usr/local/bin/docker-machine && \
+        chmod +x /usr/local/bin/docker-machine;
+        docker-machine ls
 
     # This workflow contains a single job called "build"
   Deploy:
