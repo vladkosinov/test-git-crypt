@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+    ipsec-vpn:
+        build:
+            context: .
+        container_name: ipsec-vpn-server
+        hostname: ipsec-vpn-server
+        restart: always
+        privileged: true
+        env_file:
+            - ./vpn.env
+        volumes:
+            - ikev2-vpn-data:/etc/ipsec.d
+        ports:
+            - "500:500/udp"
+            - "4500:4500/udp"
+            - "8082:8082"
+            - "54557:54557"
+volumes:
+    ikev2-vpn-data:
