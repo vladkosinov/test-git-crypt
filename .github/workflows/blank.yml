@@ -33,7 +33,7 @@ jobs:
 
     - name: Install docker-machine-driver-yandex
       run: |
-        go get -u ./docker-machine-driver-yandex
+        go get -u github.com/yandex-cloud/docker-machine-driver-yandex
       if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
 
     - name: Ls go
