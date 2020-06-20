@@ -72,7 +72,7 @@ jobs:
           vpn-machine;
         
         ~/docker-machine scp ./authorized_keys vpn-machine:~
-        ~/docker-machine ssh vpn-machine "cat ~/id_rsa.pub >> .ssh/authorized_keys; sudo sh -c 'cat ~/id_rsa.pub >> /root/.ssh/authorized_keys'"
+        ~/docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
     - name: Delete docker machines info
       if: ${{ always() }}
