@@ -25,8 +25,9 @@ jobs:
         curl -s -L $base/docker-machine-$(uname -s)-$(uname -m) >~/docker-machine && \
         chmod +x ~/docker-machine;
         ~/docker-machine ls
+
     - name: Ls go
-      run: ls ~/go && ls ~/go/src
+      run: echo $GOPATH; ls $GOPATH
 
     - name: Install docker-machine-driver-yandex
       if: ${{ false }}
