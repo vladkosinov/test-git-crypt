@@ -8,8 +8,8 @@ on:
   issue_comment:
   issues:
     types: [edited]
- # push:
- #   branches: [ master ]
+  push:
+    branches: [ master ]
 
 jobs:
   Test:
