@@ -52,17 +52,13 @@ jobs:
         chmod +x ~/docker-machine;
         ~/docker-machine ls
   
-    - name: Delete all machines
-      run: |
-        IAM_TOKEN=$(curl -s -d "{\"yandexPassportOauthToken\":\"${{ secrets.YC_TOKEN }}\"}" "https://iam.api.cloud.yandex.net/iam/v1/tokens" | jq --raw-output .iamToken)
+    - name: Delete VPS
+      env: 
+        YC_TOKEN: ${{ secrets.YC_TOKEN }}
+        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+      run: delete-vps.sh
 
-        curl -s -H "Authorization: Bearer ${IAM_TOKEN}" \
-          https://compute.api.cloud.yandex.net/compute/v1/instances\?folder_id\=${{ secrets.YC_FOLDER_ID }} |\
-          jq '.instances[].id' --raw-output |\
-          xargs -I % curl -X DELETE -H "Authorization: Bearer ${IAM_TOKEN}" \
-          https://compute.api.cloud.yandex.net/compute/v1/instances/%
-
-    - name: Create machine
+    - name: Create VPS
       run: |
         PATH=$PATH:~/go/bin;
 
@@ -78,7 +74,7 @@ jobs:
         ~/docker-machine scp ~/authorized_keys vpn-machine:~
         ~/docker-machine ssh vpn-machine "cat ~/id_rsa.pub >> .ssh/authorized_keys; sudo sh -c 'cat ~/id_rsa.pub >> /root/.ssh/authorized_keys'"
 
-    - name: Delete machines info
+    - name: Delete docker machines info
       if: ${{ always() }}
       run: rm -rf  ~/.docker/machine/machines;
 
