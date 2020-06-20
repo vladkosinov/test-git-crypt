@@ -68,6 +68,8 @@ jobs:
         YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
       run: |
         PATH=$PATH:~/go/bin;
+        rm -rf  ~/.docker/machine/machines;
+
         ~/docker-machine create \
         --driver yandex \
         --yandex-cores=1 \
