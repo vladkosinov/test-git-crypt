@@ -56,7 +56,7 @@ jobs:
       env: 
         YC_TOKEN: ${{ secrets.YC_TOKEN }}
         YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
-      run: delete-vps.sh
+      run: ./delete-vps.sh
 
     - name: Create VPS
       run: |
