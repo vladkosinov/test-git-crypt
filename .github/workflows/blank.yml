@@ -80,13 +80,15 @@ jobs:
 
     - name: Build and deploy VPN container
       run: |
+        cat crypted/server-ip.json
         PATH=$PATH:~/go/bin;
-        eval $(docker-machine env vpn-machine)
+        eval $(~/docker-machine env vpn-machine)
         docker-compose up -d --build
 
     - name: Update DNS
       run: |
-        echo "\"$(docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
+        PATH=$PATH:~/go/bin;
+        echo "\"$(~/docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
         docker run --rm -it \
             -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
             -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
