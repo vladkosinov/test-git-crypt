@@ -18,12 +18,16 @@ jobs:
   Test:
     runs-on: ubuntu-latest
     steps:
-    - name: Run a multi-line script
+
+    - name: Download docker-machine
       run: | 
         base=https://github.com/docker/machine/releases/download/v0.16.0 && \
-        curl -L $base/docker-machine-$(uname -s)-$(uname -m) >~/docker-machine && \
+        curl -s -L $base/docker-machine-$(uname -s)-$(uname -m) >~/docker-machine && \
         chmod +x ~/docker-machine;
         ~/docker-machine ls
+
+    - name: Install docker-machine-driver-yandex
+      run: go get -u github.com/yandex-cloud/docker-machine-driver-yandex
 
     # This workflow contains a single job called "build"
   Deploy:
