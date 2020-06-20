@@ -61,14 +61,14 @@ jobs:
 #        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
 #      run: ./delete-vps.sh
       run: |
-        PATH=$PATH:~/go/bin;
-        MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
-        MACHINE_STORAGE_PATH=$(pwd)/crypted/machine ~/docker-machine rm vpn-machine --force
+        export PATH=$PATH:~/go/bin;
+        export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
+        ~/docker-machine rm vpn-machine --force
 
     - name: Create VPS
       run: |
-        PATH=$PATH:~/go/bin;
-        MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
+        export PATH=$PATH:~/go/bin;
+        export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
 
         ~/docker-machine create \
           --driver yandex \
@@ -86,13 +86,14 @@ jobs:
       run: |
         export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
         export PATH=$PATH:~/go/bin;
+
         ~/docker-machine env vpn-machine
         eval $(~/docker-machine env vpn-machine)
         docker-compose up -d --build
 
     - name: Update DNS
       run: |
-        PATH=$PATH:~/go/bin;
+        export PATH=$PATH:~/go/bin;
         echo "\"$(~/docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
         docker run --rm -it \
             -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
@@ -100,12 +101,9 @@ jobs:
             -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
             stackexchange/dnscontrol dnscontrol preview | grep "Done"
 
-        git commit crypted/vpn-ip.json -m "Updated Server IP"
+        git add crypted
+        git commit -m "Updated credentials"
         git push origin HEAD
-
-    - name: Delete docker machines info
-      if: ${{ always() }}
-      run: rm -rf  ~/.docker/machine/machines;
 
   Deploy:
     # The type of runner that the job will run on
