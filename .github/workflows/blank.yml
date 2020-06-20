@@ -24,7 +24,7 @@ jobs:
       id: docker-machine-driver-yandex-latest-sha
       with:
         result-encoding: string
-        # github-token: ${{secrets.GITHUB_TOKEN}}
+        github-token: ${{secrets.GITHUB_TOKEN}}
         script: |
           const ref = await github.git.getRef({
               owner: 'yandex-cloud',
