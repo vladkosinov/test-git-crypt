@@ -37,7 +37,7 @@ jobs:
       if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
 
     - name: Ls go
-      run: ls ~/go/bin/;
+      run: ls -la ~/go/bin/;
 
   Deploy:
     # The type of runner that the job will run on
