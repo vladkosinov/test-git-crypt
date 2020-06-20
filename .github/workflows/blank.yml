@@ -25,7 +25,7 @@ jobs:
         GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
 
     - name: test
-      run: apt-get install -y git-crypt
+      run: sudo apt-get install -y git-crypt
 
 #     - uses: actions/github-script@v2
 #       id: docker-machine-driver-yandex-latest-sha
