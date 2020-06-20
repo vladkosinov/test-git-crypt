@@ -5,6 +5,9 @@ name: CI
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
 on:
+  issue_comment:
+  issues:
+    types: [edited]
   push:
     branches: [ master ]
   pull_request:
@@ -12,15 +15,98 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/github-script@v2
+      id: docker-machine-driver-yandex-latest-sha
+      with:
+        result-encoding: string
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const ref = await github.git.getRef({
+              owner: 'yandex-cloud',
+              repo: 'docker-machine-driver-yandex',
+              ref: 'heads/master'
+          });
+          
+          return ref.data.object.sha;
+
+    - uses: actions/cache@v2
+      id: restore-docker-machine-driver-yandex
+      with:
+        path: ~/go/bin/docker-machine-driver-yandex
+        key: ${{ runner.os }}-go-${{ steps.docker-machine-driver-yandex-latest-sha.outputs.result }}
+
+    - name: Install docker-machine-driver-yandex
+      run: |
+        go get -u github.com/yandex-cloud/docker-machine-driver-yandex
+      if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
+
+    - name: Download docker-machine
+      run: | 
+        base=https://github.com/docker/machine/releases/download/v0.16.0 && \
+        curl -s -L $base/docker-machine-$(uname -s)-$(uname -m) >~/docker-machine && \
+        chmod +x ~/docker-machine;
+        ~/docker-machine ls
+  
+    - name: Delete all machines
+      run: |
+        IAM_TOKEN=$(curl -s -d "{\"yandexPassportOauthToken\":\"${{ secrets.YC_TOKEN }}\"}" "https://iam.api.cloud.yandex.net/iam/v1/tokens" | jq --raw-output .iamToken)
+
+        curl -s -H "Authorization: Bearer ${IAM_TOKEN}" \
+          https://compute.api.cloud.yandex.net/compute/v1/instances\?folder_id\=${{ secrets.YC_FOLDER_ID }} -s |\
+          jq '.instances[].id' --raw-output |\
+          xargs -I % curl -X DELETE -H "Authorization: Bearer ${IAM_TOKEN}" \
+          https://compute.api.cloud.yandex.net/compute/v1/instances/%
+
+    - name: Create machine
+      env:
+        YC_TOKEN: ${{ secrets.YC_TOKEN }}
+        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+      run: |
+        PATH=$PATH:~/go/bin;
+        rm -rf  ~/.docker/machine/machines;
+
+        ~/docker-machine create \
+          --driver yandex \
+          --yandex-cores=1 \
+          --yandex-core-faction=20 \
+          --yandex-nat=true \
+          some-machine;
+        
+        ~/docker-machine scp ~/authorized_keys test-machine:~
+        ~/docker-machine ssh test-machine "cat ~/id_rsa.pub >> .ssh/authorized_keys; sudo sh -c 'cat ~/id_rsa.pub >> /root/.ssh/authorized_keys'"
+
+  Deploy:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'issues' &&
+      github.event.issue.number == 1 &&
+
+      contains(github.event.changes.body.from, '- [ ] on/off') &&
+      contains(github.event.issue.body, '- [x] on/off') &&
+
+      !contains(github.event.changes.body.from, '- [x] on/off') &&
+      !contains(github.event.issue.body, '- [ ] on/off')
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
+
+    - name: Dump github.event_name
+      env:
+        CONTEXT: ${{ toJson(github.event_name) }}
+      run: echo "$CONTEXT"
+
+    - name: Dump github.event
+      env:
+        CONTEXT: ${{ toJson(github.event) }}
+      run: echo "$CONTEXT"
 
     - name: Git-Crypt Unlock
       uses: zemuldo/git-crypt-unlock@v2.0
@@ -31,7 +117,7 @@ jobs:
 
     # Runs a single command using the runners shell
     - name: Run a one-line script
-      run: echo Hello, world!
+      run: echo $GITHUB_ACTOR
 
     # Runs a set of commands using the runners shell
     - name: Run a multi-line script
