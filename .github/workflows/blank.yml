@@ -18,6 +18,11 @@ jobs:
   Test:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+      with:
+        repository: 'yandex-cloud/docker-machine-driver-yandex'
 
     - name: Download docker-machine
       run: | 
@@ -26,14 +31,21 @@ jobs:
         chmod +x ~/docker-machine;
         ~/docker-machine ls
 
-    - name: Ls go
-      run: echo $GOPATH; ls $GOPATH
+    - uses: actions/cache@v2
+      with:
+        path: ~/go
+        key: ${{ runner.os }}-go-${{ hashFiles('~/go/bin/*') }}
 
     - name: Install docker-machine-driver-yandex
-      if: ${{ false }}
+      # if: ${{ false }}
       run: go get -u github.com/yandex-cloud/docker-machine-driver-yandex
 
-    # This workflow contains a single job called "build"
+    - name: Ls ~
+      run: ls -la ~;
+
+    - name: Ls go
+      run: ls ~/go/bin/; ls ~/go/src;
+
   Deploy:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
