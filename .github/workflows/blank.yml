@@ -76,8 +76,11 @@ jobs:
           --yandex-nat=true \
           vpn-machine;
 
-        docker-machine scp ./crypted/authorized_keys vpn-machine:~
-        docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
+        docker-machine scp ./crypted/authorized_keys vpn-machine:~;
+        docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'";
+        
+        git add crypted;
+        git commit -m "Updated credentials";
 
     - name: Build and deploy VPN container
       run: |
@@ -100,10 +103,11 @@ jobs:
             -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
             stackexchange/dnscontrol dnscontrol preview | grep "Done"
 
-    - name: Commit credentials
+        git commit ./crypted/vpn-ip.json -C HEAD --amend;
+
+    - name: Push updated credentials
+      if: ${{ always() }}
       run: |
-        git add crypted
-        git commit -m "Updated credentials"
         git push origin HEAD
 
 #   Deploy:
