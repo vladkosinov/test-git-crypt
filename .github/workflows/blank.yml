@@ -8,17 +8,21 @@ on:
   issue_comment:
   issues:
     types: [edited]
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+ # push:
+ #   branches: [ master ]
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   Test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+
+    - name: Git-Crypt Unlock
+      uses: zemuldo/git-crypt-unlock@v2.0
+      env: 
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
+        GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
 
     - uses: actions/github-script@v2
       id: docker-machine-driver-yandex-latest-sha
@@ -76,6 +80,23 @@ jobs:
         ~/docker-machine scp ./authorized_keys vpn-machine:~
         ~/docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
+    - name: Build and deploy VPN container
+      run: |
+        eval $(docker-machine env vpn-machine)
+        docker-compose up -d --build
+
+    - name: Update DNS
+      run: |
+        echo "\"$(docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
+        docker run --rm -it \
+            -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
+            -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
+            -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
+            stackexchange/dnscontrol dnscontrol preview | grep "Done"
+
+        git commit crypted/vpn-ip.json -m "Updated Server IP"
+        git push origin HEAD
+
     - name: Delete docker machines info
       if: ${{ always() }}
       run: rm -rf  ~/.docker/machine/machines;
@@ -108,12 +129,7 @@ jobs:
         CONTEXT: ${{ toJson(github.event) }}
       run: echo "$CONTEXT"
 
-    - name: Git-Crypt Unlock
-      uses: zemuldo/git-crypt-unlock@v2.0
-      env: 
-        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
-        GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
+
 
     # Runs a single command using the runners shell
     - name: Run a one-line script
