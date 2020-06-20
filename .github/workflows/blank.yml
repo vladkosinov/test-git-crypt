@@ -71,7 +71,7 @@ jobs:
           --yandex-nat=true \
           vpn-machine;
         
-        ~/docker-machine scp ~/authorized_keys vpn-machine:~
+        ~/docker-machine scp ./authorized_keys vpn-machine:~
         ~/docker-machine ssh vpn-machine "cat ~/id_rsa.pub >> .ssh/authorized_keys; sudo sh -c 'cat ~/id_rsa.pub >> /root/.ssh/authorized_keys'"
 
     - name: Delete docker machines info
