@@ -56,89 +56,91 @@ jobs:
         chmod +x ~/docker-machine;
   
     - name: Delete VPS
-#      env: 
+      env: 
+        MACHINE_STORAGE_PATH: ${{ GITHUB_WORKSPACE}}/crypted/machine
 #        YC_TOKEN: ${{ secrets.YC_TOKEN }}
 #        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
 #      run: ./delete-vps.sh
       run: |
+        echo $PATH;
+        echo $MACHINE_STORAGE_PATH;
         export PATH=$PATH:~/go/bin;
-        export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
         ~/docker-machine rm vpn-machine --force
 
-    - name: Create VPS
-      run: |
-        export PATH=$PATH:~/go/bin;
-        export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
+#     - name: Create VPS
+#       run: |
+#         export PATH=$PATH:~/go/bin;
+#         export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
 
-        ~/docker-machine create \
-          --driver yandex \
-          --yandex-token=${{ secrets.YC_TOKEN }} \
-          --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
-          --yandex-cores=1 \
-          --yandex-core-faction=20 \
-          --yandex-nat=true \
-          vpn-machine;
+#         ~/docker-machine create \
+#           --driver yandex \
+#           --yandex-token=${{ secrets.YC_TOKEN }} \
+#           --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
+#           --yandex-cores=1 \
+#           --yandex-core-faction=20 \
+#           --yandex-nat=true \
+#           vpn-machine;
 
-        ~/docker-machine scp ./crypted/authorized_keys vpn-machine:~
-        ~/docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
+#         ~/docker-machine scp ./crypted/authorized_keys vpn-machine:~
+#         ~/docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
-    - name: Build and deploy VPN container
-      run: |
-        export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
-        export PATH=$PATH:~/go/bin;
+#     - name: Build and deploy VPN container
+#       run: |
+#         export MACHINE_STORAGE_PATH=$(pwd)/crypted/machine;
+#         export PATH=$PATH:~/go/bin;
 
-        ~/docker-machine env vpn-machine
-        eval $(~/docker-machine env vpn-machine)
-        docker-compose up -d --build
+#         ~/docker-machine env vpn-machine
+#         eval $(~/docker-machine env vpn-machine)
+#         docker-compose up -d --build
 
-    - name: Update DNS
-      run: |
-        export PATH=$PATH:~/go/bin;
-        echo "\"$(~/docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
-        docker run --rm -it \
-            -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
-            -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
-            -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
-            stackexchange/dnscontrol dnscontrol preview | grep "Done"
+#     - name: Update DNS
+#       run: |
+#         export PATH=$PATH:~/go/bin;
+#         echo "\"$(~/docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
+#         docker run --rm -it \
+#             -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
+#             -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
+#             -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
+#             stackexchange/dnscontrol dnscontrol preview | grep "Done"
 
-        git add crypted
-        git commit -m "Updated credentials"
-        git push origin HEAD
+#         git add crypted
+#         git commit -m "Updated credentials"
+#         git push origin HEAD
 
-  Deploy:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'issues' &&
-      github.event.issue.number == 1 &&
+#   Deploy:
+#     # The type of runner that the job will run on
+#     runs-on: ubuntu-latest
+#     if: |
+#       github.event_name == 'issues' &&
+#       github.event.issue.number == 1 &&
 
-      contains(github.event.changes.body.from, '- [ ] on/off') &&
-      contains(github.event.issue.body, '- [x] on/off') &&
+#       contains(github.event.changes.body.from, '- [ ] on/off') &&
+#       contains(github.event.issue.body, '- [x] on/off') &&
 
-      !contains(github.event.changes.body.from, '- [x] on/off') &&
-      !contains(github.event.issue.body, '- [ ] on/off')
+#       !contains(github.event.changes.body.from, '- [x] on/off') &&
+#       !contains(github.event.issue.body, '- [ ] on/off')
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - uses: actions/checkout@v2
+#     # Steps represent a sequence of tasks that will be executed as part of the job
+#     steps:
+#     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+#     - uses: actions/checkout@v2
 
-    - name: Dump github.event_name
-      env:
-        CONTEXT: ${{ toJson(github.event_name) }}
-      run: echo "$CONTEXT"
+#     - name: Dump github.event_name
+#       env:
+#         CONTEXT: ${{ toJson(github.event_name) }}
+#       run: echo "$CONTEXT"
 
-    - name: Dump github.event
-      env:
-        CONTEXT: ${{ toJson(github.event) }}
-      run: echo "$CONTEXT"
+#     - name: Dump github.event
+#       env:
+#         CONTEXT: ${{ toJson(github.event) }}
+#       run: echo "$CONTEXT"
 
 
 
-    # Runs a single command using the runners shell
-    - name: Run a one-line script
-      run: echo $GITHUB_ACTOR
+#     # Runs a single command using the runners shell
+#     - name: Run a one-line script
+#       run: echo $GITHUB_ACTOR
 
-    # Runs a set of commands using the runners shell
-    - name: Run a multi-line script
-      run: cat secretdir/test.txt
+#     # Runs a set of commands using the runners shell
+#     - name: Run a multi-line script
+#       run: cat secretdir/test.txt
