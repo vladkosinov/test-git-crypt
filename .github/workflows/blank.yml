@@ -57,7 +57,10 @@ jobs:
         PATH=$PATH:~/go/bin;
         ~/docker-machine create \
         --driver yandex \
-        --yandex-token=FRegxx408323539fsdgHhsakawe0 \
+        --yandex-token=${{ secrets.YANDEX_TOKEN }} \
+        --yandex-cores=1 \
+        --yandex-core-faction=20 \
+        --yandex-nat=true \
         some-machine
 
   Deploy:
