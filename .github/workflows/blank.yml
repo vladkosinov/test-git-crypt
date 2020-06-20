@@ -70,7 +70,9 @@ jobs:
           --yandex-core-faction=20 \
           --yandex-nat=true \
           vpn-machine;
-        
+
+    - name: Upload keys
+      run: |
         ~/docker-machine scp ./authorized_keys vpn-machine:~
         ~/docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
