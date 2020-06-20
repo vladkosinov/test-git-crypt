@@ -27,7 +27,7 @@ jobs:
           const ref = octokit.git.getRef({
               'yandex-cloud',
               'docker-machine-driver-yandex',
-              'refs/heads/master',
+              'refs/heads/master'
           });
           console.log(ref);
 
