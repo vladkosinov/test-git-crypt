@@ -17,18 +17,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-#     - name: Git-Crypt Unlock
-#       uses: zemuldo/git-crypt-unlock@v2.0
-#       env: 
-#         GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-#         GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
-#         GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
-
-
     - name: Install git-crypt
       run: sudo apt-get install -y git-crypt        
 
-    - name: Unlock
+    - name: Git-Crypt configure
       env:
          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
          GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
