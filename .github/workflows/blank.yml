@@ -130,7 +130,7 @@ jobs:
             stackexchange/dnscontrol dnscontrol push | grep "Done"
 
     - name: Push updated credentials
-      if: ${{ steps.docker-machine-create.outcome == "success" }}
+      if: ${{ steps.docker-machine-create.outcome == 'success' }}
       run: |
         git add crypted
         git -c user.name="Github Actions" \
