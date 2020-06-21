@@ -102,8 +102,6 @@ jobs:
 
     - name: Copy authorized_keys
       run: |
-        echo $MACHINE_STORAGE_PATH;
-
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
         export PATH=$PATH:$HOME/go/bin
 
