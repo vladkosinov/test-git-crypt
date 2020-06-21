@@ -31,6 +31,9 @@ jobs:
     - name: Unlock
       run: |
         echo "$GPG_PRIVATE_KEY" | base64 -d > "$HOME"/git-crypt-key.asc
+        
+        stat /usr/libexec/gpg-preset-passphrase
+
         gpg --import "$HOME"/git-crypt-key.asc
 
 
