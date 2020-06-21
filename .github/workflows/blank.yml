@@ -107,8 +107,10 @@ jobs:
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
         export PATH=$PATH:$HOME/go/bin;
 
-        docker-machine env vpn-machine
-        eval $(docker-machine env vpn-machine)
+        docker-machine env vpn-machine --shell bash > ~/docker-env.sh
+        cat ~/docker-env.sh
+        source ~/docker-env.sh
+
         docker-compose up -d --build
 
     - name: Update DNS
@@ -129,7 +131,7 @@ jobs:
         git add crypted;
         git -c user.name="Github Actions" \
             -c user.email="${{ github.actor }}@users.noreply.github.com" \
-            --author="${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>" \
+            --author=\"${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>\" \
             commit -m "Updated credentials";
         git push origin HEAD
 
