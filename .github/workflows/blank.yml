@@ -83,6 +83,7 @@ jobs:
         docker-machine rm vpn-machine --force
 
     - name: Create VPS
+      id: docker-machine-create
       run: |
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
         export PATH=$PATH:$HOME/go/bin
@@ -96,6 +97,16 @@ jobs:
           --yandex-nat=true \
           vpn-machine
 
+        echo "\"$(docker-machine ip vpn-machine)\"" > crypted/server-ip.json
+        docker-machine env vpn-machine --shell bash > crypted/docker-machine-env-bash.sh
+
+    - name: Copy authorized_keys
+      run: |
+        echo $MACHINE_STORAGE_PATH;
+
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
+
         docker-machine scp ./crypted/authorized_keys vpn-machine:~
         docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
@@ -104,10 +115,7 @@ jobs:
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
         export PATH=$PATH:$HOME/go/bin
 
-        docker-machine env vpn-machine --shell bash > ~/docker-machine-env.sh
-        source ~/docker-machine-env.sh
-        rm ~/docker-machine-env.sh
-
+        source crypted/docker-machine-env-bash.sh
         docker-compose up -d --build
 
     - name: Update DNS
@@ -115,7 +123,6 @@ jobs:
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
         export PATH=$PATH:$HOME/go/bin
 
-        echo "\"$(docker-machine ip vpn-machine)\"" > crypted/server-ip.json
         docker run --rm \
             -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
             -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
@@ -123,7 +130,7 @@ jobs:
             stackexchange/dnscontrol dnscontrol push | grep "Done"
 
     - name: Push updated credentials
-      if: ${{ always() }}
+      if: ${{ steps.docker-machine-create.outcome == "success" }}
       run: |
         git add crypted
         git -c user.name="Github Actions" \
