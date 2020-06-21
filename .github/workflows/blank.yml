@@ -34,18 +34,15 @@ jobs:
          GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
          GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
       run: |
-        echo "$GPG_PRIVATE_KEY" | base64 -d > "$HOME"/git-crypt-key.asc;
+        echo "$GPG_PRIVATE_KEY" | base64 -d > ~/git-crypt-key.asc;
         gpg --batch --import "$HOME"/git-crypt-key.asc
-        rm "$HOME"/git-crypt-key.asc
+        rm ~/git-crypt-key.asc
 
         gpgconf --kill gpg-agent
         gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
         /usr/lib/gnupg/gpg-preset-passphrase --preset --passphrase "$GPG_KEY_PASS" "$GPG_KEY_GRIP"
 
         git-crypt unlock
-        
-        cat ./crypted/server-ip.json
-
 
     - uses: actions/github-script@v2
       id: docker-machine-driver-yandex-latest-sha
@@ -76,19 +73,19 @@ jobs:
       run: |
         base=https://github.com/docker/machine/releases/download/v0.16.0 && \
         sudo wget --output-document=/usr/local/bin/docker-machine $base/docker-machine-$(uname -s)-$(uname -m) && \
-        sudo chmod +x /usr/local/bin/docker-machine;
+        sudo chmod +x /usr/local/bin/docker-machine
   
     - name: Delete VPS
       run: |
-        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
-        export PATH=$PATH:$HOME/go/bin;
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
 
         docker-machine rm vpn-machine --force
 
     - name: Create VPS
       run: |
-        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
-        export PATH=$PATH:$HOME/go/bin;
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
 
         docker-machine create \
           --driver yandex \
@@ -97,42 +94,41 @@ jobs:
           --yandex-cores=1 \
           --yandex-core-faction=20 \
           --yandex-nat=true \
-          vpn-machine;
+          vpn-machine
 
-        docker-machine scp ./crypted/authorized_keys vpn-machine:~;
-        docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'";
+        docker-machine scp ./crypted/authorized_keys vpn-machine:~
+        docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
     - name: Build and deploy VPN container
       run: |
-        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
-        export PATH=$PATH:$HOME/go/bin;
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
 
-        docker-machine env vpn-machine --shell bash > ~/docker-env.sh
-        cat ~/docker-env.sh
-        source ~/docker-env.sh
+        docker-machine env vpn-machine --shell bash > ~/docker-machine-env.sh
+        source ~/docker-machine-env.sh
+        rm ~/docker-machine-env.sh
 
         docker-compose up -d --build
 
     - name: Update DNS
       run: |
-        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine;
-        export PATH=$PATH:$HOME/go/bin;
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
 
-        echo "\"$(docker-machine ip vpn-machine)\"" > crypted/vpn-ip.json
-        docker run --rm -it \
+        echo "\"$(docker-machine ip vpn-machine)\"" > crypted/server-ip.json
+        docker run --rm \
             -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
             -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
-            -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
-            stackexchange/dnscontrol dnscontrol preview | grep "Done"
+            -v $(pwd)/crypted/server-ip.json:/dns/server-ip.json \
+            stackexchange/dnscontrol dnscontrol push | grep "Done"
 
     - name: Push updated credentials
       if: ${{ always() }}
       run: |
-        git add crypted;
+        git add crypted
         git -c user.name="Github Actions" \
             -c user.email="${{ github.actor }}@users.noreply.github.com" \
-            --author=\"${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>\" \
-            commit -m "Updated credentials";
+            commit -m "Updated credentials"
         git push origin HEAD
 
 #   Deploy:
