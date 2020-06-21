@@ -17,12 +17,35 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Git-Crypt Unlock
-      uses: zemuldo/git-crypt-unlock@v2.0
-      env: 
-        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
-        GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
+#     - name: Git-Crypt Unlock
+#       uses: zemuldo/git-crypt-unlock@v2.0
+#       env: 
+#         GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+#         GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
+#         GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
+
+
+    - name: Install git-crypt
+      run: sudo apt-get install -y git-crypt        
+
+    - name: Unlock
+      run: |
+        echo "$GPG_PRIVATE_KEY" | base64 -d > "$HOME"/git-crypt-key.asc
+        gpg --version
+#        stat /usr/libexec/gpg-preset-passphrase
+
+#        gpg --import "$HOME"/git-crypt-key.asc
+
+
+    - name: ASD
+      run: |
+        gpgconf --kill gpg-agent
+        gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
+        rm "$HOME"/git-crypt-key.asc
+#    /usr/libexec/gpg-preset-passphrase --preset --passphrase "$GPG_KEY_PASS" "$GPG_KEY_GRIP"        
+# git-crypt unlock
+
+
 
     - uses: actions/github-script@v2
       id: docker-machine-driver-yandex-latest-sha
@@ -76,8 +99,11 @@ jobs:
           --yandex-nat=true \
           vpn-machine;
 
-        docker-machine scp ./crypted/authorized_keys vpn-machine:~
-        docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
+        docker-machine scp ./crypted/authorized_keys vpn-machine:~;
+        docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'";
+        
+        git add crypted;
+        git commit -m "Updated credentials";
 
     - name: Build and deploy VPN container
       run: |
@@ -100,10 +126,11 @@ jobs:
             -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
             stackexchange/dnscontrol dnscontrol preview | grep "Done"
 
-    - name: Commit credentials
+        git commit ./crypted/vpn-ip.json -C HEAD --amend;
+
+    - name: Push updated credentials
+      if: ${{ always() }}
       run: |
-        git add crypted
-        git commit -m "Updated credentials"
         git push origin HEAD
 
 #   Deploy:
