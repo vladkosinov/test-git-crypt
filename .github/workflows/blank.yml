@@ -32,7 +32,8 @@ jobs:
       run: |
         echo "$GPG_PRIVATE_KEY" | base64 -d > "$HOME"/git-crypt-key.asc
         gpg --version
-        stat /usr/lib/gnupg2/gpg-preset-passphrase
+        ls -la  /usr/lib/gnupg2/gpg-preset-passphrase
+        md5 "$HOME"/git-crypt-key.asc
         gpg --import --batch "$HOME"/git-crypt-key.asc
 
 
