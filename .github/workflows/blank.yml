@@ -30,7 +30,10 @@ jobs:
 
     - name: Unlock
       run: |
-        echo "$GPG_PRIVATE_KEY" | base64 -d > "$HOME"/git-crypt-key.asc
+        echo "$GPG_PRIVATE_KEY" | base64 -d > "$HOME"/git-crypt-key.asc;
+        head -1 "$HOME"/git-crypt-key.asc;
+        tail -1 "$HOME"/git-crypt-key.asc;
+
         gpg --version
         ls -la  /usr/lib/gnupg2/gpg-preset-passphrase
         md5sum "$HOME"/git-crypt-key.asc
