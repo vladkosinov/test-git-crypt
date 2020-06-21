@@ -44,7 +44,7 @@ jobs:
 
         git-crypt unlock
         
-        cat ./crypted/vpn-ip.json
+        cat ./crypted/server-ip.json
 
 
     - uses: actions/github-script@v2
@@ -126,7 +126,7 @@ jobs:
             -v $(pwd)/crypted/vpn-ip.json:/dns/vpn-ip.json \
             stackexchange/dnscontrol dnscontrol preview | grep "Done"
 
-        git commit ./crypted/vpn-ip.json -C HEAD --amend;
+        git commit ./crypted/server-ip.json -C HEAD --amend;
 
     - name: Push updated credentials
       if: ${{ always() }}
