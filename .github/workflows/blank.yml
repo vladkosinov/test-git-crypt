@@ -29,25 +29,22 @@ jobs:
       run: sudo apt-get install -y git-crypt        
 
     - name: Unlock
+      env:
+         GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+         GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
+         GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
       run: |
         echo "$GPG_PRIVATE_KEY" | base64 -d > "$HOME"/git-crypt-key.asc;
-        head -1 "$HOME"/git-crypt-key.asc;
-        tail -1 "$HOME"/git-crypt-key.asc;
+        gpg --batch --import "$HOME"/git-crypt-key.asc
+        rm "$HOME"/git-crypt-key.asc
 
-        gpg --version
-        ls -la  /usr/lib/gnupg2/gpg-preset-passphrase
-        md5sum "$HOME"/git-crypt-key.asc
-        gpg --import --batch "$HOME"/git-crypt-key.asc
-
-
-    - name: ASD
-      run: |
         gpgconf --kill gpg-agent
         gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
-        rm "$HOME"/git-crypt-key.asc
-        /usr/lib/gnupg2/gpg-preset-passphrase --preset --passphrase "$GPG_KEY_PASS" "$GPG_KEY_GRIP"        
-# git-crypt unlock
+        /usr/lib/gnupg/gpg-preset-passphrase --preset --passphrase "$GPG_KEY_PASS" "$GPG_KEY_GRIP"
 
+        git-crypt unlock
+        
+        cat ./crypted/vpn-ip.json
 
 
     - uses: actions/github-script@v2
