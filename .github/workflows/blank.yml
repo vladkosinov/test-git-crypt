@@ -27,8 +27,10 @@ jobs:
             repo: process.env.REPO,
             issue_number: process.env.ISSUE_NUMBER,
           });
+          
+          console.log('Labels:', labels)
 
-          if (labels.includes('In progress')) {
+          if (labels && labels.includes('In progress')) {
             console.error('Another process is in the progress')
             process.exit(1)
           }
@@ -37,7 +39,7 @@ jobs:
             owner: process.env.OWNER,
             repo: process.env.REPO,
             issue_number: process.env.ISSUE_NUMBER,
-            labels: [...labels, 'In progress'],
+            labels: labels ? [...labels, 'In progress'] : ['In progress'],
           });
           
           const newComment = await github.issues.createComment({
