@@ -69,6 +69,7 @@ jobs:
         sudo chmod +x /usr/local/bin/docker-machine
   
     - name: Delete VPS
+      id: docker-machine-rm
       run: |
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
         export PATH=$PATH:$HOME/go/bin
@@ -121,7 +122,7 @@ jobs:
             stackexchange/dnscontrol dnscontrol push | grep "Done"
 
     - name: Push updated credentials
-      if: ${{ steps.docker-machine-create.outcome == 'success' }}
+      if: ${{ steps.docker-machine-create.outcome == 'success' || steps.docker-machine-rm.outcome == 'success' }}
       run: |
         git add crypted
         git -c user.name="Github Actions" \
