@@ -12,7 +12,7 @@ on:
       - docker-compose.yml
       - forwarding.sh  
 jobs:
-  Generate a comment:
+  CreateComment:
     runs-on: ubuntu-latest
     steps:
     - name: Dump github.event
