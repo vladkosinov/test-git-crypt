@@ -32,16 +32,18 @@ jobs:
       env:
         OWNER: ${{ github.event.repository.owner.login }}
         REPO: ${{ github.event.repository.name }}
+        COMMENT_ID: ${{ github.event.comment.id }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const updateResult = await github.issues.update({
             owner: process.env.OWNER,
             repo: process.env.REPO,
-            issue_number: 1,
+            comment_id: process.env.COMMENT_ID,
+            // issue_number: 1,
             body: "In progress..."
-          });
-
+          });    
+    
           console.log('updateResult', updateResult);
 
 
