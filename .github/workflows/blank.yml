@@ -132,7 +132,7 @@ jobs:
         docker-machine rm vpn-machine --force
 
     - name: Create VPS
-      if: ${{ steps.check-get-command.outputs.result != 'stop') }}
+      if: steps.check-get-command.outputs.result != 'stop'
       id: docker-machine-create
       run: |
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
@@ -151,7 +151,7 @@ jobs:
         docker-machine env vpn-machine --shell bash > crypted/docker-machine-env-bash.sh
 
     - name: Copy authorized_keys
-      if: ${{ steps.check-get-command.outputs.result != 'stop') }}
+      if: steps.check-get-command.outputs.result != 'stop'
       run: |
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
         export PATH=$PATH:$HOME/go/bin
@@ -160,7 +160,7 @@ jobs:
         docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
     - name: Build and deploy VPN container
-      if: ${{ steps.check-get-command.outputs.result != 'stop') }}
+      if: steps.check-get-command.outputs.result != 'stop'
       run: |
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
         export PATH=$PATH:$HOME/go/bin
@@ -169,7 +169,7 @@ jobs:
         docker-compose up -d --build
 
     - name: Update DNS
-      if: ${{ steps.check-get-command.outputs.result != 'stop') }}
+      if: steps.check-get-command.outputs.result != 'stop'
       run: |
         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
         export PATH=$PATH:$HOME/go/bin
