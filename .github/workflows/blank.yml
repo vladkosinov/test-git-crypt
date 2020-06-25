@@ -1,199 +1,222 @@
-# This is a basic workflow to help you get started with Actions
+name: CD
 
-name: CI
-
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
 on:
-#   issues:
-#     types: [edited]
-#   push:
-#     branches: [ master ]
   issue_comment:
-    types: [created]
+    types:
+      - created
+
 jobs:
-  Test:
+  Deploy:
     runs-on: ubuntu-latest
-    # if: ${{ false }}
     steps:
-    - uses: actions/checkout@v2
 
-    - name: Dump github.event_name
-      env:
-        CONTEXT: ${{ toJson(github.event_name) }}
-      run: echo "$CONTEXT"
-
-    - name: Dump github.event
-      env:
-        CONTEXT: ${{ toJson(github.event) }}
-      run: echo "$CONTEXT"
-
+    # Check Set lock
     - uses: actions/github-script@v2
+      id: check-set-lock
       env:
         OWNER: ${{ github.event.repository.owner.login }}
         REPO: ${{ github.event.repository.name }}
-        COMMENT_ID: ${{ github.event.comment.id }}
+        ISSUE_NUMBER: ${{ github.event.issue.number }}
+        COMMENT_URL: ${{ github.event.comment.html_url }}
+      with:
+        result-encoding: string
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const labels = await github.issues.listLabelsOnIssue({
+            owner: process.env.OWNER,
+            repo: process.env.REPO,
+            issue_number: process.env.ISSUE_NUMBER,
+          });
+
+          if (labels.includes('In progress')) {
+            console.error('Another process is in the progress')
+            process.exit(1)
+          }
+
+          await github.issues.setLabels({
+            owner: process.env.OWNER,
+            repo: process.env.REPO,
+            issue_number: process.env.ISSUE_NUMBER,
+            labels: [...labels, 'In progress'],
+          });
+          
+          const newComment = await github.issues.createComment({
+            owner: process.env.OWNER,
+            repo: process.env.REPO,
+            issue_number: process.env.ISSUE_NUMBER,
+            body: `In progress: ${process.env.COMMENT_URL}`,
+          });
+          
+          return newComment.id
+
+    - uses: actions/github-script@v2
+      id: check-get-command
+      env:
+        COMMENT_BODY: ${{ github.event.comment.body }}
+      with:
+        result-encoding: string
+        script: |
+          const body = process.env.COMMENT_BODY
+          const commands = ['/start', '/stop', '/restart'].filter(c => body.includes(c))
+
+          if (!commands.length) {
+            console.error('No command provided')
+            process.exit(1)
+          }
+
+          if (commands.length > 1) {
+            console.error('More then one command provided:', commands)
+            process.exit(1)
+          }
+
+          return commands[0].slice(1)
+
+    - uses: actions/checkout@v2
+
+    - name: Install git-crypt
+      run: sudo apt-get install -y git-crypt        
+
+    - name: Git-Crypt configure
+      env:
+         GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+         GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
+         GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
+      run: |
+        echo "$GPG_PRIVATE_KEY" | base64 -d > ~/git-crypt-key.asc;
+        gpg --batch --import "$HOME"/git-crypt-key.asc
+        rm ~/git-crypt-key.asc
+
+        gpgconf --kill gpg-agent
+        gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
+        /usr/lib/gnupg/gpg-preset-passphrase --preset --passphrase "$GPG_KEY_PASS" "$GPG_KEY_GRIP"
+
+        git-crypt unlock
+
+    - uses: actions/github-script@v2
+      id: docker-machine-driver-yandex-latest-sha
+      with:
+        result-encoding: string
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const ref = await github.git.getRef({
+              owner: 'yandex-cloud',
+              repo: 'docker-machine-driver-yandex',
+              ref: 'heads/master'
+          });
+          
+          return ref.data.object.sha;
+
+    - uses: actions/cache@v2
+      id: restore-docker-machine-driver-yandex
+      with:
+        path: ~/go/bin/docker-machine-driver-yandex
+        key: ${{ runner.os }}-go-${{ steps.docker-machine-driver-yandex-latest-sha.outputs.result }}
+
+    - name: Install docker-machine-driver-yandex
+      run: |
+        go get -u github.com/yandex-cloud/docker-machine-driver-yandex
+      if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
+
+    - name: Download docker-machine
+      run: |
+        base=https://github.com/docker/machine/releases/download/v0.16.0 && \
+        sudo wget --output-document=/usr/local/bin/docker-machine $base/docker-machine-$(uname -s)-$(uname -m) && \
+        sudo chmod +x /usr/local/bin/docker-machine
+  
+    - name: docker-machine rm
+      id: docker-machine-rm
+      run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
+
+        docker-machine rm vpn-machine --force
+
+    - name: Create VPS
+      if: ${{ steps.check-get-command.outputs.result != 'stop') }}
+      id: docker-machine-create
+      run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
+
+        docker-machine create \
+          --driver yandex \
+          --yandex-token=${{ secrets.YC_TOKEN }} \
+          --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
+          --yandex-cores=1 \
+          --yandex-core-faction=20 \
+          --yandex-nat=true \
+          vpn-machine
+
+        echo "\"$(docker-machine ip vpn-machine)\"" > crypted/server-ip.json
+        docker-machine env vpn-machine --shell bash > crypted/docker-machine-env-bash.sh
+
+    - name: Copy authorized_keys
+      if: ${{ steps.check-get-command.outputs.result != 'stop') }}
+      run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
+
+        docker-machine scp ./crypted/authorized_keys vpn-machine:~
+        docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
+
+    - name: Build and deploy VPN container
+      if: ${{ steps.check-get-command.outputs.result != 'stop') }}
+      run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
+
+        source crypted/docker-machine-env-bash.sh
+        docker-compose up -d --build
+
+    - name: Update DNS
+      if: ${{ steps.check-get-command.outputs.result != 'stop') }}
+      run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
+
+        docker run --rm \
+            -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
+            -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
+            -v $(pwd)/crypted/server-ip.json:/dns/server-ip.json \
+            stackexchange/dnscontrol dnscontrol push | grep "Done"
+
+    - name: Push updated credentials
+      if: ${{ always() && (steps.docker-machine-rm.outcome == 'success' || steps.docker-machine-create.outcome == 'success') }}
+      run: |
+        git add crypted
+        git -c user.name="Github Actions" \
+            -c user.email="${{ github.actor }}@users.noreply.github.com" \
+            commit -m "Updated credentials"
+        git push origin HEAD
+
+    # Release lock
+    - uses: actions/github-script@v2
+      if: ${{ always() }}
+      env:
+        OWNER: ${{ github.event.repository.owner.login }}
+        REPO: ${{ github.event.repository.name }}
+        ISSUE_NUMBER: ${{ github.event.issue.number }}
+        LOCK_COMMENT_ID: ${{ steps.check-set-lock.outputs.result }}
+        COMMENT_URL: ${{ github.event.comment.html_url }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const updateResult = await github.issues.updateComment({
+          const labels = await github.issues.listLabelsOnIssue({
             owner: process.env.OWNER,
             repo: process.env.REPO,
-            comment_id: process.env.COMMENT_ID,
-            // issue_number: 1,
-            body: "In progress..."
-          });    
-    
-          console.log('updateResult', updateResult);
+            issue_number: process.env.ISSUE_NUMBER,
+          })
 
-
-#     - name: Install git-crypt
-#       run: sudo apt-get install -y git-crypt        
-
-#     - name: Git-Crypt configure
-#       env:
-#          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-#          GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
-#          GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
-#       run: |
-#         echo "$GPG_PRIVATE_KEY" | base64 -d > ~/git-crypt-key.asc;
-#         gpg --batch --import "$HOME"/git-crypt-key.asc
-#         rm ~/git-crypt-key.asc
-
-#         gpgconf --kill gpg-agent
-#         gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
-#         /usr/lib/gnupg/gpg-preset-passphrase --preset --passphrase "$GPG_KEY_PASS" "$GPG_KEY_GRIP"
-
-#         git-crypt unlock
-
-#     - uses: actions/github-script@v2
-#       id: docker-machine-driver-yandex-latest-sha
-#       with:
-#         result-encoding: string
-#         github-token: ${{ secrets.GITHUB_TOKEN }}
-#         script: |
-#           const ref = await github.git.getRef({
-#               owner: 'yandex-cloud',
-#               repo: 'docker-machine-driver-yandex',
-#               ref: 'heads/master'
-#           });
+          await github.issues.setLabels({
+            owner: process.env.OWNER,
+            repo: process.env.REPO,
+            issue_number: process.env.ISSUE_NUMBER,
+            labels: labels.filter(l => l !== 'In progress'),
+          })
           
-#           return ref.data.object.sha;
-
-#     - uses: actions/cache@v2
-#       id: restore-docker-machine-driver-yandex
-#       with:
-#         path: ~/go/bin/docker-machine-driver-yandex
-#         key: ${{ runner.os }}-go-${{ steps.docker-machine-driver-yandex-latest-sha.outputs.result }}
-
-#     - name: Install docker-machine-driver-yandex
-#       run: |
-#         go get -u github.com/yandex-cloud/docker-machine-driver-yandex
-#       if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
-
-#     - name: Download docker-machine
-#       run: |
-#         base=https://github.com/docker/machine/releases/download/v0.16.0 && \
-#         sudo wget --output-document=/usr/local/bin/docker-machine $base/docker-machine-$(uname -s)-$(uname -m) && \
-#         sudo chmod +x /usr/local/bin/docker-machine
-  
-#     - name: Delete VPS
-#       id: docker-machine-rm
-#       run: |
-#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-#         export PATH=$PATH:$HOME/go/bin
-
-#         docker-machine rm vpn-machine --force
-
-#     - name: Create VPS
-#       id: docker-machine-create
-#       run: |
-#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-#         export PATH=$PATH:$HOME/go/bin
-
-#         docker-machine create \
-#           --driver yandex \
-#           --yandex-token=${{ secrets.YC_TOKEN }} \
-#           --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
-#           --yandex-cores=1 \
-#           --yandex-core-faction=20 \
-#           --yandex-nat=true \
-#           vpn-machine
-
-#         echo "\"$(docker-machine ip vpn-machine)\"" > crypted/server-ip.json
-#         docker-machine env vpn-machine --shell bash > crypted/docker-machine-env-bash.sh
-
-#     - name: Copy authorized_keys
-#       run: |
-#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-#         export PATH=$PATH:$HOME/go/bin
-
-#         docker-machine scp ./crypted/authorized_keys vpn-machine:~
-#         docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
-
-#     - name: Build and deploy VPN container
-#       run: |
-#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-#         export PATH=$PATH:$HOME/go/bin
-
-#         source crypted/docker-machine-env-bash.sh
-#         docker-compose up -d --build
-
-#     - name: Update DNS
-#       run: |
-#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-#         export PATH=$PATH:$HOME/go/bin
-
-#         docker run --rm \
-#             -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
-#             -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
-#             -v $(pwd)/crypted/server-ip.json:/dns/server-ip.json \
-#             stackexchange/dnscontrol dnscontrol push | grep "Done"
-
-#     - name: Push updated credentials
-#       id: push
-#       if: ${{ always() && (steps.docker-machine-rm.outcome == 'success' || steps.docker-machine-create.outcome == 'success') }}
-#       run: |
-#         git add crypted
-#         git -c user.name="Github Actions" \
-#             -c user.email="${{ github.actor }}@users.noreply.github.com" \
-#             commit -m "Updated credentials"
-#         git push origin HEAD
-
-#   Deploy:
-#     # The type of runner that the job will run on
-#     runs-on: ubuntu-latest
-#     if: |
-#       github.event_name == 'issues' &&
-#       github.event.issue.number == 1 &&
-
-#       contains(github.event.changes.body.from, '- [ ] on/off') &&
-#       contains(github.event.issue.body, '- [x] on/off') &&
-
-#       !contains(github.event.changes.body.from, '- [x] on/off') &&
-#       !contains(github.event.issue.body, '- [ ] on/off')
-
-#     # Steps represent a sequence of tasks that will be executed as part of the job
-#     steps:
-#     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-#     - uses: actions/checkout@v2
-
-#     - name: Dump github.event_name
-#       env:
-#         CONTEXT: ${{ toJson(github.event_name) }}
-#       run: echo "$CONTEXT"
-
-#     - name: Dump github.event
-#       env:
-#         CONTEXT: ${{ toJson(github.event) }}
-#       run: echo "$CONTEXT"
-
-
-
-#     # Runs a single command using the runners shell
-#     - name: Run a one-line script
-#       run: echo $GITHUB_ACTOR
-
-#     # Runs a set of commands using the runners shell
-#     - name: Run a multi-line script
-#       run: cat secretdir/test.txt
+          await github.issues.updateComment({
+            owner: process.env.OWNER,
+            repo: process.env.REPO,
+            comment_id: process.env.LOCK_COMMENT_ID,
+            body: `Finished ${process.env.COMMENT_URL} with ${{ job.status }}`
+          })
