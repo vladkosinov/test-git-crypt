@@ -22,15 +22,13 @@ jobs:
         result-encoding: string
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const labels = await github.issues.listLabelsOnIssue({
+          const { data: labels } = await github.issues.listLabelsOnIssue({
             owner: process.env.OWNER,
             repo: process.env.REPO,
             issue_number: process.env.ISSUE_NUMBER,
           });
-          
-          console.log('Labels:', labels)
 
-          if (labels && labels.includes('In progress')) {
+          if (labels.includes('In progress')) {
             console.error('Another process is in the progress')
             process.exit(1)
           }
@@ -39,15 +37,17 @@ jobs:
             owner: process.env.OWNER,
             repo: process.env.REPO,
             issue_number: process.env.ISSUE_NUMBER,
-            labels: labels ? [...labels, 'In progress'] : ['In progress'],
+            labels: [...labels, 'In progress'],
           });
           
-          const newComment = await github.issues.createComment({
+          const { data: newComment } = await github.issues.createComment({
             owner: process.env.OWNER,
             repo: process.env.REPO,
             issue_number: process.env.ISSUE_NUMBER,
             body: `In progress: ${process.env.COMMENT_URL}`,
           });
+          
+          console.log('newComment', newComment);
           
           return newComment.id
 
@@ -203,7 +203,7 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const labels = await github.issues.listLabelsOnIssue({
+          const { data: labels } = await github.issues.listLabelsOnIssue({
             owner: process.env.OWNER,
             repo: process.env.REPO,
             issue_number: process.env.ISSUE_NUMBER,
