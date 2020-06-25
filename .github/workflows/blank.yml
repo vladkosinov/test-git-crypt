@@ -132,7 +132,7 @@ jobs:
         git push origin HEAD
 
     - name: Always
-    - if: ${{ always() }}
+      if: ${{ always() }}
       run: |
         echo "steps.docker-machine-rm.outcome ${{ steps.docker-machine-rm.outcome }}"
         echo "steps.docker-machine-rm.conclusion ${{ steps.docker-machine-rm.conclusion }}"
