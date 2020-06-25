@@ -1,0 +1,90 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Trigger restart on changes
+
+on:
+  push:
+    branches: 
+      - master
+    paths:
+      - crypted/** 
+      - Dockerfile
+      - docker-compose.yml
+      - forwarding.sh  
+jobs:
+  Generate a comment:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Dump github.event
+      env:
+        CONTEXT: ${{ toJson(github.event) }}
+      run: echo "$CONTEXT"
+
+    - uses: actions/checkout@v2
+
+    - name: Install git-crypt
+      run: sudo apt-get install -y git-crypt        
+
+    - name: Git-Crypt configure
+      env:
+         GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+         GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
+         GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
+      run: |
+        echo "$GPG_PRIVATE_KEY" | base64 -d > ~/git-crypt-key.asc;
+        gpg --batch --import "$HOME"/git-crypt-key.asc
+        rm ~/git-crypt-key.asc
+
+        gpgconf --kill gpg-agent
+        gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
+        /usr/lib/gnupg/gpg-preset-passphrase --preset --passphrase "$GPG_KEY_PASS" "$GPG_KEY_GRIP"
+
+        git-crypt unlock
+
+    - uses: actions/github-script@v2
+      id: docker-machine-driver-yandex-latest-sha
+      with:
+        result-encoding: string
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const ref = await github.git.getRef({
+              owner: 'yandex-cloud',
+              repo: 'docker-machine-driver-yandex',
+              ref: 'heads/master'
+          });
+          
+          return ref.data.object.sha;
+
+    - uses: actions/cache@v2
+      id: restore-docker-machine-driver-yandex
+      with:
+        path: ~/go/bin/docker-machine-driver-yandex
+        key: ${{ runner.os }}-go-${{ steps.docker-machine-driver-yandex-latest-sha.outputs.result }}
+
+    - name: Install docker-machine-driver-yandex
+      run: |
+        go get -u github.com/yandex-cloud/docker-machine-driver-yandex
+      if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
+
+    - name: Download docker-machine
+      run: |
+        base=https://github.com/docker/machine/releases/download/v0.16.0 && \
+        sudo wget --output-document=/usr/local/bin/docker-machine $base/docker-machine-$(uname -s)-$(uname -m) && \
+        sudo chmod +x /usr/local/bin/docker-machine
+  
+    - name: Check docker-machine status
+      run: docker-machine status vpn-machine
+    
+    - uses: actions/github-script@v2
+      env:
+        OWNER: ${{ github.event.repository.owner.login }}
+        REPO: ${{ github.event.repository.name }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |          
+          const updateResult = await github.issues.createComment({
+            issue_number: 1,
+            owner: process.env.OWNER,
+            repo: process.env.REPO,
+            body: "/restart\n*(triggered by changed files)*"
+          });
