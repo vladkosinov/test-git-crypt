@@ -18,118 +18,139 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install git-crypt
-      run: sudo apt-get install -y git-crypt        
-
-    - name: Git-Crypt configure
+    - name: Dump github.event_name
       env:
-         GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-         GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
-         GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
-      run: |
-        echo "$GPG_PRIVATE_KEY" | base64 -d > ~/git-crypt-key.asc;
-        gpg --batch --import "$HOME"/git-crypt-key.asc
-        rm ~/git-crypt-key.asc
+        CONTEXT: ${{ toJson(github.event_name) }}
+      run: echo "$CONTEXT"
 
-        gpgconf --kill gpg-agent
-        gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
-        /usr/lib/gnupg/gpg-preset-passphrase --preset --passphrase "$GPG_KEY_PASS" "$GPG_KEY_GRIP"
-
-        git-crypt unlock
+    - name: Dump github.event
+      env:
+        CONTEXT: ${{ toJson(github.event) }}
+      run: echo "$CONTEXT"
 
     - uses: actions/github-script@v2
-      id: docker-machine-driver-yandex-latest-sha
       with:
-        result-encoding: string
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const ref = await github.git.getRef({
-              owner: 'yandex-cloud',
-              repo: 'docker-machine-driver-yandex',
-              ref: 'heads/master'
+          const updateResult = await octokit.issues.update({
+            // owner: 'vladkosinov',
+            repo: '${{ github.repository }}',
+            issue_number: 1,
           });
+
+
+#     - name: Install git-crypt
+#       run: sudo apt-get install -y git-crypt        
+
+#     - name: Git-Crypt configure
+#       env:
+#          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+#          GPG_KEY_GRIP: ${{ secrets.GPG_KEY_GRIP }}
+#          GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
+#       run: |
+#         echo "$GPG_PRIVATE_KEY" | base64 -d > ~/git-crypt-key.asc;
+#         gpg --batch --import "$HOME"/git-crypt-key.asc
+#         rm ~/git-crypt-key.asc
+
+#         gpgconf --kill gpg-agent
+#         gpg-agent --daemon --allow-preset-passphrase --max-cache-ttl 3153600000
+#         /usr/lib/gnupg/gpg-preset-passphrase --preset --passphrase "$GPG_KEY_PASS" "$GPG_KEY_GRIP"
+
+#         git-crypt unlock
+
+#     - uses: actions/github-script@v2
+#       id: docker-machine-driver-yandex-latest-sha
+#       with:
+#         result-encoding: string
+#         github-token: ${{ secrets.GITHUB_TOKEN }}
+#         script: |
+#           const ref = await github.git.getRef({
+#               owner: 'yandex-cloud',
+#               repo: 'docker-machine-driver-yandex',
+#               ref: 'heads/master'
+#           });
           
-          return ref.data.object.sha;
+#           return ref.data.object.sha;
 
-    - uses: actions/cache@v2
-      id: restore-docker-machine-driver-yandex
-      with:
-        path: ~/go/bin/docker-machine-driver-yandex
-        key: ${{ runner.os }}-go-${{ steps.docker-machine-driver-yandex-latest-sha.outputs.result }}
+#     - uses: actions/cache@v2
+#       id: restore-docker-machine-driver-yandex
+#       with:
+#         path: ~/go/bin/docker-machine-driver-yandex
+#         key: ${{ runner.os }}-go-${{ steps.docker-machine-driver-yandex-latest-sha.outputs.result }}
 
-    - name: Install docker-machine-driver-yandex
-      run: |
-        go get -u github.com/yandex-cloud/docker-machine-driver-yandex
-      if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
+#     - name: Install docker-machine-driver-yandex
+#       run: |
+#         go get -u github.com/yandex-cloud/docker-machine-driver-yandex
+#       if: steps.restore-docker-machine-driver-yandex.outputs.cache-hit != 'true'
 
-    - name: Download docker-machine
-      run: |
-        base=https://github.com/docker/machine/releases/download/v0.16.0 && \
-        sudo wget --output-document=/usr/local/bin/docker-machine $base/docker-machine-$(uname -s)-$(uname -m) && \
-        sudo chmod +x /usr/local/bin/docker-machine
+#     - name: Download docker-machine
+#       run: |
+#         base=https://github.com/docker/machine/releases/download/v0.16.0 && \
+#         sudo wget --output-document=/usr/local/bin/docker-machine $base/docker-machine-$(uname -s)-$(uname -m) && \
+#         sudo chmod +x /usr/local/bin/docker-machine
   
-    - name: Delete VPS
-      id: docker-machine-rm
-      run: |
-        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-        export PATH=$PATH:$HOME/go/bin
+#     - name: Delete VPS
+#       id: docker-machine-rm
+#       run: |
+#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+#         export PATH=$PATH:$HOME/go/bin
 
-        docker-machine rm vpn-machine --force
+#         docker-machine rm vpn-machine --force
 
-    - name: Create VPS
-      id: docker-machine-create
-      run: |
-        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-        export PATH=$PATH:$HOME/go/bin
+#     - name: Create VPS
+#       id: docker-machine-create
+#       run: |
+#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+#         export PATH=$PATH:$HOME/go/bin
 
-        docker-machine create \
-          --driver yandex \
-          --yandex-token=${{ secrets.YC_TOKEN }} \
-          --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
-          --yandex-cores=1 \
-          --yandex-core-faction=20 \
-          --yandex-nat=true \
-          vpn-machine
+#         docker-machine create \
+#           --driver yandex \
+#           --yandex-token=${{ secrets.YC_TOKEN }} \
+#           --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
+#           --yandex-cores=1 \
+#           --yandex-core-faction=20 \
+#           --yandex-nat=true \
+#           vpn-machine
 
-        echo "\"$(docker-machine ip vpn-machine)\"" > crypted/server-ip.json
-        docker-machine env vpn-machine --shell bash > crypted/docker-machine-env-bash.sh
+#         echo "\"$(docker-machine ip vpn-machine)\"" > crypted/server-ip.json
+#         docker-machine env vpn-machine --shell bash > crypted/docker-machine-env-bash.sh
 
-    - name: Copy authorized_keys
-      run: |
-        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-        export PATH=$PATH:$HOME/go/bin
+#     - name: Copy authorized_keys
+#       run: |
+#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+#         export PATH=$PATH:$HOME/go/bin
 
-        docker-machine scp ./crypted/authorized_keys vpn-machine:~
-        docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
+#         docker-machine scp ./crypted/authorized_keys vpn-machine:~
+#         docker-machine ssh vpn-machine "cat ~/authorized_keys >> .ssh/authorized_keys; sudo sh -c 'cat ~/authorized_keys >> /root/.ssh/authorized_keys'"
 
-    - name: Build and deploy VPN container
-      run: |
-        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-        export PATH=$PATH:$HOME/go/bin
+#     - name: Build and deploy VPN container
+#       run: |
+#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+#         export PATH=$PATH:$HOME/go/bin
 
-        source crypted/docker-machine-env-bash.sh
-        docker-compose up -d --build
+#         source crypted/docker-machine-env-bash.sh
+#         docker-compose up -d --build
 
-    - name: Update DNS
-      run: |
-        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
-        export PATH=$PATH:$HOME/go/bin
+#     - name: Update DNS
+#       run: |
+#         export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+#         export PATH=$PATH:$HOME/go/bin
 
-        docker run --rm \
-            -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
-            -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
-            -v $(pwd)/crypted/server-ip.json:/dns/server-ip.json \
-            stackexchange/dnscontrol dnscontrol push | grep "Done"
+#         docker run --rm \
+#             -v $(pwd)/crypted/dnsconfig.js:/dns/dnsconfig.js \
+#             -v $(pwd)/crypted/dnscontrol-creds.json:/dns/creds.json \
+#             -v $(pwd)/crypted/server-ip.json:/dns/server-ip.json \
+#             stackexchange/dnscontrol dnscontrol push | grep "Done"
 
-    - name: Push updated credentials
-      id: push
-      if: ${{ always() && (steps.docker-machine-rm.outcome == 'success' || steps.docker-machine-create.outcome == 'success') }}
-      run: |
-        git add crypted
-        git -c user.name="Github Actions" \
-            -c user.email="${{ github.actor }}@users.noreply.github.com" \
-            commit -m "Updated credentials"
-        git push origin HEAD
+#     - name: Push updated credentials
+#       id: push
+#       if: ${{ always() && (steps.docker-machine-rm.outcome == 'success' || steps.docker-machine-create.outcome == 'success') }}
+#       run: |
+#         git add crypted
+#         git -c user.name="Github Actions" \
+#             -c user.email="${{ github.actor }}@users.noreply.github.com" \
+#             commit -m "Updated credentials"
+#         git push origin HEAD
 
 #   Deploy:
 #     # The type of runner that the job will run on
