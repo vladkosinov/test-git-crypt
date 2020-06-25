@@ -22,11 +22,13 @@ jobs:
         result-encoding: string
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const labels = await github.issues.listLabelsOnIssue({
+          const labelsResponse = await github.issues.listLabelsOnIssue({
             owner: process.env.OWNER,
             repo: process.env.REPO,
             issue_number: process.env.ISSUE_NUMBER,
-          }).data.map(label => label.name);
+          })
+          
+          const labels = labelsResponse.data.map(label => label.name)
 
           if (labels.includes('In progress')) {
             console.error('Another process is in the progress')
@@ -203,11 +205,13 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const labels = await github.issues.listLabelsOnIssue({
+          const labelsResponse = await github.issues.listLabelsOnIssue({
             owner: process.env.OWNER,
             repo: process.env.REPO,
             issue_number: process.env.ISSUE_NUMBER,
-          }).data.map(label => label.name);
+          })
+          
+          const labels = labelsResponse.data.map(label => label.name)
 
           await github.issues.setLabels({
             owner: process.env.OWNER,
