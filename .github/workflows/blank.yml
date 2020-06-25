@@ -122,6 +122,7 @@ jobs:
             stackexchange/dnscontrol dnscontrol push | grep "Done"
 
     - name: Push updated credentials
+      id: push
       if: ${{ steps.docker-machine-rm.outcome == 'success' || steps.docker-machine-create.outcome == 'success' }}
       run: |
         git add crypted
@@ -129,6 +130,16 @@ jobs:
             -c user.email="${{ github.actor }}@users.noreply.github.com" \
             commit -m "Updated credentials"
         git push origin HEAD
+
+    - name: Always
+    - if: ${{ always() }}
+      run: |
+        echo "steps.docker-machine-rm.outcome ${{ steps.docker-machine-rm.outcome }}"
+        echo "steps.docker-machine-rm.conclusion ${{ steps.docker-machine-rm.conclusion }}"
+        echo "steps.docker-machine-create.outcome ${{ steps.docker-machine-create.outcome }}"
+        echo "steps.docker-machine-create.conclusion ${{ steps.docker-machine-create.conclusion }}"
+        echo "steps.push.outcome ${{ steps.push.outcome }}"
+        echo "steps.push.conclusion ${{ steps.push.conclusion }}"
 
 #   Deploy:
 #     # The type of runner that the job will run on
