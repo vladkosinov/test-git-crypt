@@ -39,6 +39,7 @@ jobs:
             owner: process.env.OWNER,
             repo: process.env.REPO,
             issue_number: 1,
+            body: "In progress..."
           });
 
           console.log('updateResult', updateResult);
