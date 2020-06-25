@@ -73,7 +73,11 @@ jobs:
         sudo chmod +x /usr/local/bin/docker-machine
   
     - name: Check docker-machine status
-      run: docker-machine status vpn-machine
+      run: |
+        export MACHINE_STORAGE_PATH=$GITHUB_WORKSPACE/crypted/machine
+        export PATH=$PATH:$HOME/go/bin
+
+        docker-machine status vpn-machine
     
     - uses: actions/github-script@v2
       env:
