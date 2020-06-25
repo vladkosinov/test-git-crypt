@@ -32,11 +32,13 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const updateResult = await octokit.issues.update({
+          const updateResult = await github.issues.update({
             // owner: 'vladkosinov',
             repo: '${{ github.repository }}',
             issue_number: 1,
           });
+          
+          console.log('updateResult', updateResult);
 
 
 #     - name: Install git-crypt
