@@ -34,7 +34,7 @@ jobs:
           });
           
           const concurrentRuns = runsInProgress.filter(run => run.id !== process.env.GITHUB_RUN_ID)
-          console.log('concurrentRuns', concurentRuns)
+          console.log('concurrentRuns', concurrentRuns)
           
           if (concurrentRuns.length) {
             core.setFailed('There is an another task running already')
