@@ -36,7 +36,7 @@ jobs:
             status: 'in_progress'
           });
           
-          const concurrentRuns = runsInProgress.filter(run => run.id !== process.env.GITHUB_RUN_ID)
+          const concurrentRuns = runsInProgress.filter(run => run.id !== parseInt(process.env.GITHUB_RUN_ID))
           console.log('concurrentRuns', concurrentRuns)
           
           if (concurrentRuns.length) {
