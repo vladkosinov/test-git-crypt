@@ -26,7 +26,7 @@ jobs:
             run_id: process.env.GITHUB_RUN_ID,
           });
 
-          const { data: runsInProgress } = await github.actions.listWorkflowRuns({
+          const { data : { workflow_runs : runsInProgress } } = await github.actions.listWorkflowRuns({
             owner: process.env.OWNER,
             repo: process.env.REPO,
             workflow_id,
