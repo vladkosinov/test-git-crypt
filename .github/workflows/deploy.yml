@@ -166,7 +166,7 @@ jobs:
           --driver yandex \
           --yandex-token=${{ secrets.YC_TOKEN }} \
           --yandex-folder-id=${{ secrets.YC_FOLDER_ID }} \
-          --yandex-cores=1 \
+          --yandex-cores=2 \
           --yandex-core-faction=20 \
           --yandex-nat=true \
           vpn-machine
