@@ -49,7 +49,7 @@ jobs:
         result-encoding: string
         script: |
           const command = process.env.COMMAND
-          const commands = ['start', 'stop', 'restart'].filter(c => body.includes(c))
+          const commands = ['start', 'stop', 'restart'].filter(c => c === command)
 
           if (!commands.length) {
             console.error('No command provided')
