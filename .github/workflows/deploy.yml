@@ -61,7 +61,7 @@ jobs:
             process.exit(1)
           }
 
-          return commands[0].slice(1)
+          return commands[0]
 
     - uses: actions/checkout@v2
 
