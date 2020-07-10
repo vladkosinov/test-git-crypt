@@ -2,7 +2,7 @@ name: Dispatch
 
 on:
   repository_dispatch:
-    types: [testing]
+    types: ["on-demand-deploy"]
 
 jobs:
   test:
